@@ -1,18 +1,42 @@
-sudo apt-get update
+sudo -i
 
-sudo apt install docker.io -y
-sudo chmod 666 /var/run/docker.sock
+tee /etc/modules-load.d/containerd.conf <<EOF
+overlay
+br_netfilter
+EOF
 
-sudo apt-get install -y apt-transport-https ca-certificates curl gnupg
-sudo mkdir -p -m 755 /etc/apt/keyrings
+$ modprobe overlay
+$ modprobe br_netfilter
 
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+tee /etc/sysctl.d/kubernetes.conf<<EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward = 1
+EOF
 
-echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sysctl --system
 
-sudo apt update
+mkdir -m 0755 -p /etc/apt/keyrings
+$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-sudo apt install -y kubeadm=1.28.1-1.1 kubelet=1.28.1-1.1 kubectl=1.28.1-1.1
+echo \
+"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt-get update && apt-get install -y containerd.io
+
+$ mkdir -p /etc/containerd
+$ containerd config default>/etc/containerd/config.toml
+$ sed -e 's/SystemdCgroup = false/SystemdCgroup = true/g' -i /etc/containerd/config.toml
+
+$ systemctl daemon-reload
+$ systemctl restart containerd
+$ systemctl enable containerd 
+$ systemctl status containerd
+
+apt-get update && apt-get install -y apt-transport-https ca-certificates curl
+
+
 
 #on worker node
 
@@ -27,4 +51,6 @@ kubectl apply -f https://docs.projectcalico.org/v3.20/manifests/calico.yaml
 ###KUBEaudit to scan kube cluster
 
 
+kubeadm join 172.31.44.226:6443 --token 6u9inh.wpsjq4xfoedi4vpz \
+        --discovery-token-ca-cert-hash sha256:7e74646402af3fb755dd4ccdccdb34e5f3b21535fa39dfb4a14c9e8553cfc23a
 
