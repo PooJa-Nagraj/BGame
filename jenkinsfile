@@ -7,7 +7,22 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/PooJa-Nagraj/BGame.git'
                 
             }
+        
         }
-
+        //  stage('Build and Test') {
+        //     steps {
+        //         sh 'ls -ltr'
+        // // build the project and create a JAR file
+        //         sh 'cd BGame && mvn clean package'
+        //     }
+        stage('compile '){
+            steps{
+                sh 'mvn compile'
+            }
+        stage('test '){
+            steps{
+                sh 'mvn test'
+            }        
+        }
     }
 }
