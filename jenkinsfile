@@ -15,10 +15,12 @@ pipeline {
         // // build the project and create a JAR file
         //         sh 'cd BGame && mvn clean package'
         //     }
+// }
         stage('compile '){
             steps{
                 sh 'mvn compile'
             }
+}
         stage('test '){
             steps{
                 sh 'mvn test'
